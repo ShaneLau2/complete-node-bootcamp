@@ -1,7 +1,8 @@
 const fs = require("fs");
 const http = require("http");
 const url = require("url");
-const replaceTemplate = require("../final/modules/replaceTemplate");
+const replaceTemplate = require("./modules/replaceTemplate");
+const { type } = require("os");
 
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, "utf-8");
 const dataObj = JSON.parse(data);
@@ -9,30 +10,45 @@ const overviewTemp = fs.readFileSync(
     `${__dirname}/templates/overview.html`,
     `utf-8`
 );
-
-function replaceTemplate(temp, data) {
-    // Code for replaceTemplate function
-    // "id": 0,
-    // "productName": "Fresh Avocados",
-    // "image": "🥑",
-    // "from": "Spain",
-    // "nutrients": "Vitamin B, Vitamin K",
-    // "quantity": "4 🥑",
-    // "price": "6.50",
-    // "organic": true,
-    // "description": "A ripe avocado yields to gentle pressure when held in the palm of the hand and squeezed. The fruit is not sweet, but distinctly and subtly flavored, with smooth texture. The avocado is popular in vegetarian cuisine as a substitute for meats in sandwiches and salads because of its high fat content. Generally, avocado is served raw, though some cultivars, including the common 'Hass', can be cooked for a short time without becoming bitter. It is used as the base for the Mexican dip known as guacamole, as well as a spread on corn tortillas or toast, served with spices."
-    let output = temp.replace(`{%IMAGE%}\g`, data.image);
-}
+const cardTemp = fs.readFileSync(`${__dirname}/templates/card.html`, "utf-8");
+const productTemp = fs.readFileSync(
+    `${__dirname}/templates/product.html`,
+    "utf-8"
+);
 const server = http.createServer((req, res) => {
-    const pathname = url.parse(req.url, true).pathname;
-    if (pathname === "/") {
+    const { pathname, query } = url.parse(req.url, true);
+    if (pathname === "/" || pathname === "/overview") {
+        console.log("flag");
         res.writeHead(200, {
             "Content-type": "text/html",
         });
-        const output = replaceTemplate(overviewTemp, data);
+        const cardsHtml = dataObj
+            .map((el) => replaceTemplate(cardTemp, el))
+            .join("");
+        // console.log(cardsHtml);
+        const output = overviewTemp.replace("{%PRODUCT_CARDS%}", cardsHtml);
+
         res.end(output);
+        // const cardsHtml = dataObj
+        //     .map((el) => replaceTemplate(tempCard, el))
+        //     .join("");
+        // const output = tempOverview.replace("{%PRODUCT_CARDS%}", cardsHtml);
+    } else if (pathname === "/product") {
+        res.writeHead(200, {
+            "Content-type": "text/html",
+        });
+        const productCard = dataObj[query.id];
+        console.log(query.id);
+        const output = replaceTemplate(productTemp, productCard);
+        res.end(output);
+    } else {
+        res.writeHead(404, {
+            "Content-type": "text/html",
+            "my-own-header": "hello-world",
+        });
+        res.end("<h1>Page not found!</h1>");
     }
-    console.log(pathname);
+    // console.log(pathname);
 });
 
 server.listen(8000, "127.0.0.1", () => {
